@@ -1,0 +1,27 @@
+# Powershell Script - copy and paste into Powershell - Elevate and run as Admin
+# Windows computers in Amazon Fulfillment centers and on mobile carts often get too many copies of installed printers and this causes issues - this removed duplicate ASIN printers without multiple logins.
+# Get all installed printers  
+$installedPrinters = Get-Printer -Full
+
+# Filter Zebra 430t printers - The ASIN Label Printers on Carts
+$zebraPrinters = $installedPrinters | Where-Object { $_.Name -like "*GX430t*" -and $_.Type -eq "Local"}
+
+# Remove Zebra 430t printers
+foreach ($printer in $zebraPrinters) {
+    $printServer = $printer.HostingPrintServer
+    $portName = $printer.PortName
+    $printerName = $printer.Name
+	
+	# Use local computer name if $printServer is null or empty
+    if ([string]::IsNullOrEmpty($printServer)) {
+    $printServer = $env:COMPUTERNAME
+    }
+
+    # Remove the printer
+    Remove-Printer -Name $printerName -ComputerName $printServer -ErrorAction SilentlyContinue
+
+    # Remove the printer port
+    if ($portName -ne "IP_") { # Skip IP ports
+        Remove-PrinterPort -Name $portName -ComputerName $printServer -ErrorAction SilentlyContinue
+    }
+}
